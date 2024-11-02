@@ -19,10 +19,10 @@
 
 Для установки необходимых инструментов используйте следующие команды (для систем на базе Debian/Ubuntu):
 
-\```bash
+```bash
 sudo apt-get update
 sudo apt-get install nmap masscan sqlite3 python3
-\```
+```
 
 ---
 
@@ -32,10 +32,10 @@ sudo apt-get install nmap masscan sqlite3 python3
 
 Сначала склонируйте репозиторий с кодом на ваш локальный компьютер. Замените `yourusername` и `yourrepository` на ваши данные:
 
-\```bash
+```bash
 git clone https://github.com/yourusername/yourrepository.git
 cd yourrepository
-\```
+```
 
 ### 2. Создайте файл с целевыми IP-адресами
 
@@ -55,9 +55,9 @@ cd yourrepository
 
 После настройки всего необходимого, вы можете запустить основной скрипт следующим образом:
 
-\```bash
+```bash
 bash scan_script.sh
-\```
+```
 
 ---
 

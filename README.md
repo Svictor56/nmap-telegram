@@ -100,3 +100,51 @@ if [[ -f changes.log ]]; then
   python3 "$TELEGRAM_SCRIPT"
   rm changes.log
 fi
+
+
+Explanation of the scan.sh Script
+  masscan: Quickly scans ports, and if open ports are found, nmap performs a detailed scan on each IP/port.
+  SQLite: Stores current and previous scan results, allowing easy detection of changes.
+  compare_and_notify: Records changes in changes.log, which the Python notification script later processes.
+
+Cron Setup
+  To run scan.sh daily at 2:00 AM, add the following cron job:
+  0 2 * * * /path/to/scan.sh >> /path/to/scan.log 2>&1
+
+Python Script: notify_changes.py
+
+This script reads any detected changes from changes.log and sends notifications via Telegram.
+
+notify_changes.py Script
+import os
+import sqlite3
+import requests
+
+# Telegram configuration
+TELEGRAM_TOKEN = 'YOUR_TELEGRAM_TOKEN'
+TELEGRAM_CHAT_ID = 'YOUR_CHAT_ID'
+DB_FILE = 'scan_results.db'
+
+# Function to send a Telegram message
+def send_telegram_message(message):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    data = {
+        'chat_id': TELEGRAM_CHAT_ID,
+        'text': message
+    }
+    requests.post(url, data=data)
+
+# Check for changes
+def notify_changes():
+    if os.path.isfile('changes.log'):
+        with open('changes.log', 'r') as file:
+            changes = file.read()
+            if changes:
+                send_telegram_message("Detected changes in open ports:\n" + changes)
+
+if __name__ == "__main__":
+    notify_changes()
+
+Explanation of the notify_changes.py Script
+  send_telegram_message: Sends a text message to the specified Telegram chat.
+  notify_changes: Reads changes.log and sends its content to Telegram.

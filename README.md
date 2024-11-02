@@ -100,7 +100,7 @@ if [[ -f changes.log ]]; then
   python3 "$TELEGRAM_SCRIPT"
   rm changes.log
 fi
-
+```
 
 Explanation of the scan.sh Script
   masscan: Quickly scans ports, and if open ports are found, nmap performs a detailed scan on each IP/port.
@@ -114,7 +114,7 @@ Cron Setup
 Python Script: notify_changes.py
 
 This script reads any detected changes from changes.log and sends notifications via Telegram.
-
+```python
 notify_changes.py Script
 import os
 import sqlite3
@@ -144,7 +144,17 @@ def notify_changes():
 
 if __name__ == "__main__":
     notify_changes()
-
+```
 Explanation of the notify_changes.py Script
+  send_telegram_message: Sends a text message to the specified Telegram chat.
+  notify_changes: Reads changes.log and sends its content to Telegram.
+
+Usage Instructions
+  Populate TARGET_FILE with IP addresses or networks for scanning.
+  Set up a cron job to run scan.sh daily.
+  Add your Telegram token and chat ID in TELEGRAM_TOKEN and TELEGRAM_CHAT_ID in the Python script.
+  These scripts will help automate port monitoring and notify of any changes in open or closed ports on servers.
+
+
   send_telegram_message: Sends a text message to the specified Telegram chat.
   notify_changes: Reads changes.log and sends its content to Telegram.

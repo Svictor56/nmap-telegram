@@ -1,161 +1,80 @@
-# Network Scanner with Change Detection and Telegram Notifications
+# Инструкция по запуску скрипта для сканирования хостов с использованием Nmap и Masscan
 
-This project includes two scripts:
+## Описание
 
-1. **`scan.sh`**: A Bash script that scans IP addresses or networks (from a file) for open ports using `masscan` and `nmap`. It saves scan results in an SQLite database and compares them to previous scans to detect changes (e.g., open or closed ports, new hosts).
-2. **`notify_changes.py`**: A Python script that sends a notification to a Telegram channel about any detected changes in open ports or hosts.
+Этот скрипт позволяет сканировать заданные IP-адреса на наличие открытых портов с использованием инструментов **Nmap** и **Masscan**. Он также отправляет уведомления в Telegram о новых хостах и изменениях состояния портов.
 
-## Bash Script: `scan.sh`
+---
 
-The Bash script performs the following steps:
-1. Reads IP addresses and networks from a target file.
-2. Uses `masscan` for a quick scan.
-3. Runs `nmap` on open ports found by `masscan` for detailed information.
-4. Logs results in an SQLite database, noting changes since the last scan.
-5. Runs daily at night via cron.
+## Требования
 
-### `scan.sh` Script
+Перед использованием скрипта убедитесь, что у вас установлены следующие инструменты:
 
-```bash
-#!/bin/bash
+- **nmap**
+- **masscan**
+- **sqlite3**
+- **Python**
 
-# Parameters
-TARGET_FILE="targets.txt"            # File with IPs or networks for scanning
-DB_FILE="scan_results.db"            # Database file for storing results
-TELEGRAM_SCRIPT="notify_changes.py"  # Python script for notifications
+### Установка зависимостей
 
-# Check for target file existence
-if [[ ! -f "$TARGET_FILE" ]]; then
-  echo "Target file not found!"
-  exit 1
-fi
+Для установки необходимых инструментов используйте следующие команды (для систем на базе Debian/Ubuntu):
 
-# Create database if it doesn't exist
-if [[ ! -f "$DB_FILE" ]]; then
-  sqlite3 "$DB_FILE" <<EOF
-CREATE TABLE scan_results (
-  ip TEXT,
-  port INTEGER,
-  status TEXT,
-  service TEXT,
-  timestamp TEXT,
-  PRIMARY KEY (ip, port)
-);
-EOF
-fi
+\```bash
+sudo apt-get update
+sudo apt-get install nmap masscan sqlite3 python3
+\```
 
-# Function to save data to database
-save_to_db() {
-  local ip=$1
-  local port=$2
-  local status=$3
-  local service=$4
-  local timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+---
 
-  sqlite3 "$DB_FILE" <<EOF
-REPLACE INTO scan_results (ip, port, status, service, timestamp)
-VALUES ('$ip', $port, '$status', '$service', '$timestamp');
-EOF
-}
+## Настройка
 
-# Function to compare current data with previous data
-compare_and_notify() {
-  local ip=$1
-  local port=$2
-  local new_status=$3
+### 1. Склонируйте репозиторий с кодом
 
-  # Check if this IP and port was in the database and its status
-  prev_status=$(sqlite3 "$DB_FILE" "SELECT status FROM scan_results WHERE ip='$ip' AND port=$port;")
-  
-  if [[ "$prev_status" != "$new_status" ]]; then
-    echo "Change detected: $ip:$port $prev_status -> $new_status" >> changes.log
-  fi
-}
+Сначала склонируйте репозиторий с кодом на ваш локальный компьютер. Замените `yourusername` и `yourrepository` на ваши данные:
 
-# Run masscan for quick scanning
-echo "Running masscan for quick scan..."
-masscan -p1-65535 -iL "$TARGET_FILE" --rate=10000 | while read -r line; do
-  ip=$(echo "$line" | awk '{print $6}')
-  port=$(echo "$line" | awk '{print $4}' | cut -d '/' -f 1)
-  
-  # Run nmap for detailed scanning
-  echo "Scanning $ip:$port using nmap..."
-  nmap -p "$port" -sV "$ip" -oG - | grep -Eo "([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+|open|closed|filtered|SERVICE)" | while read -r nmap_result; do
-    service=$(echo "$nmap_result" | awk '{print $3}')
-    status=$(echo "$nmap_result" | awk '{print $2}')
-    
-    # Compare with previous data
-    compare_and_notify "$ip" "$port" "$status"
+\```bash
+git clone https://github.com/yourusername/yourrepository.git
+cd yourrepository
+\```
 
-    # Save to database
-    save_to_db "$ip" "$port" "$status" "$service"
-  done
-done
+### 2. Создайте файл с целевыми IP-адресами
 
-# Run notification script if changes are detected
-if [[ -f changes.log ]]; then
-  echo "Sending notifications about detected changes..."
-  python3 "$TELEGRAM_SCRIPT"
-  rm changes.log
-fi
-```
+Создайте файл `targets.txt` и добавьте в него IP-адреса или подсети, которые вы хотите просканировать. 
 
-## Explanation of the scan.sh Script
+### 3. Создайте Python-скрипт для отправки уведомлений
 
-  1. ``masscan``: Quickly scans ports, and if open ports are found, nmap performs a detailed scan on each IP/port.
-  2. ``SQLite``: Stores current and previous scan results, allowing easy detection of changes.
-  3. ``compare_and_notify``: Records changes in changes.log, which the Python notification script later processes.
+Создайте файл `notify_changes.py`, который будет отправлять уведомления в Telegram. Замените токен бота и ID чата на ваши данные.
 
-## Cron Setup
+### 4. Настройте логирование
 
-  To run ``scan.sh`` daily at 2:00 AM, add the following cron job:
-  ```bash
-  0 2 * * * /path/to/scan.sh >> /path/to/scan.log 2>&1
-  ```
+Скрипт будет создавать файл логов `scan_log.txt`. Убедитесь, что у вас есть права на запись в текущей директории. Логи будут автоматически ротироваться каждый день.
 
-## Python Script: ``notify_changes.py``
+---
 
-This script reads any detected changes from changes.log and sends notifications via Telegram.
+## Запуск скрипта
 
-```python
-notify_changes.py Script
-import os
-import sqlite3
-import requests
+После настройки всего необходимого, вы можете запустить основной скрипт следующим образом:
 
-# Telegram configuration
-TELEGRAM_TOKEN = 'YOUR_TELEGRAM_TOKEN'
-TELEGRAM_CHAT_ID = 'YOUR_CHAT_ID'
-DB_FILE = 'scan_results.db'
+\```bash
+bash scan_script.sh
+\```
 
-# Function to send a Telegram message
-def send_telegram_message(message):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    data = {
-        'chat_id': TELEGRAM_CHAT_ID,
-        'text': message
-    }
-    requests.post(url, data=data)
+---
 
-# Check for changes
-def notify_changes():
-    if os.path.isfile('changes.log'):
-        with open('changes.log', 'r') as file:
-            changes = file.read()
-            if changes:
-                send_telegram_message("Detected changes in open ports:\n" + changes)
+## Обновление и ротация логов
 
-if __name__ == "__main__":
-    notify_changes()
-```
-Explanation of the ``notify_changes.py`` Script
-  ``send_telegram_message``: Sends a text message to the specified Telegram chat.
-  ``notify_changes``: Reads changes.log and sends its content to Telegram.
+Логи будут автоматически ротационироваться каждый день. При этом старый лог будет сохраняться как `scan_log.txt.old`.
 
-Usage Instructions
-  1. Populate TARGET_FILE with IP addresses or networks for scanning.
-  2. Set up a cron job to run scan.sh daily.
-  3. Add your Telegram token and chat ID in TELEGRAM_TOKEN and TELEGRAM_CHAT_ID in the Python script.
-  
-  These scripts will help automate port monitoring and notify of any changes in open or closed ports on servers.
+---
 
+## Примечания
+
+- Убедитесь, что у вас есть права доступа на сканирование указанных IP-адресов.
+- Обратите внимание на политику использования Masscan и Nmap, чтобы избежать блокировок со стороны администраторов сети.
+- В случае проблем с отправкой уведомлений, проверьте настройки вашего Telegram-бота.
+
+---
+
+## Лицензия
+
+Этот проект лицензирован на условиях MIT License. См. файл [LICENSE](LICENSE) для получения подробной информации.

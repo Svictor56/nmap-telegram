@@ -1,4 +1,3 @@
-Network Scanner with Change Detection and Telegram Notifications
 # Network Scanner with Change Detection and Telegram Notifications
 
 This project includes two scripts:
@@ -101,18 +100,23 @@ if [[ -f changes.log ]]; then
 fi
 ```
 
-Explanation of the scan.sh Script
-  masscan: Quickly scans ports, and if open ports are found, nmap performs a detailed scan on each IP/port.
-  SQLite: Stores current and previous scan results, allowing easy detection of changes.
-  compare_and_notify: Records changes in changes.log, which the Python notification script later processes.
+## Explanation of the scan.sh Script
 
-Cron Setup
-  To run scan.sh daily at 2:00 AM, add the following cron job:
+  1. ``masscan``: Quickly scans ports, and if open ports are found, nmap performs a detailed scan on each IP/port.
+  2. ``SQLite``: Stores current and previous scan results, allowing easy detection of changes.
+  3. ``compare_and_notify``: Records changes in changes.log, which the Python notification script later processes.
+
+## Cron Setup
+
+  To run ``scan.sh`` daily at 2:00 AM, add the following cron job:
+  ```bash
   0 2 * * * /path/to/scan.sh >> /path/to/scan.log 2>&1
+  ```
 
-Python Script: notify_changes.py
+## Python Script: ``notify_changes.py``
 
 This script reads any detected changes from changes.log and sends notifications via Telegram.
+
 ```python
 notify_changes.py Script
 import os
@@ -144,16 +148,14 @@ def notify_changes():
 if __name__ == "__main__":
     notify_changes()
 ```
-Explanation of the notify_changes.py Script
-  send_telegram_message: Sends a text message to the specified Telegram chat.
-  notify_changes: Reads changes.log and sends its content to Telegram.
+Explanation of the ``notify_changes.py`` Script
+  ``send_telegram_message``: Sends a text message to the specified Telegram chat.
+  ``notify_changes``: Reads changes.log and sends its content to Telegram.
 
 Usage Instructions
-  Populate TARGET_FILE with IP addresses or networks for scanning.
-  Set up a cron job to run scan.sh daily.
-  Add your Telegram token and chat ID in TELEGRAM_TOKEN and TELEGRAM_CHAT_ID in the Python script.
+  1. Populate TARGET_FILE with IP addresses or networks for scanning.
+  2. Set up a cron job to run scan.sh daily.
+  3. Add your Telegram token and chat ID in TELEGRAM_TOKEN and TELEGRAM_CHAT_ID in the Python script.
+  
   These scripts will help automate port monitoring and notify of any changes in open or closed ports on servers.
 
-
-  send_telegram_message: Sends a text message to the specified Telegram chat.
-  notify_changes: Reads changes.log and sends its content to Telegram.
